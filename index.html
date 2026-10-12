@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Minijuego Ajedrez Infantil - Clasificador de Peones</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Nunito', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        html, body {
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+            background-color: #f8fafc; /* Fondo neutro muy suave */
+        }
+
+        /* Animaciones para PDI */
+        .borde-animado {
+            box-shadow: 0 0 0 6px #fbbf24, 0 10px 25px -5px rgba(251, 191, 36, 0.5);
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        @keyframes exito-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .anim-exito {
+            animation: exito-pulse 0.4s ease-out;
+        }
+
+        /* Scroll oculto para la zona de peones si son muchos */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col p-2 md:p-4 text-slate-800 h-full">
+
+    <!-- Cabecera Superior Minimalista -->
+    <header class="w-full flex justify-between items-center bg-white p-3 md:p-4 rounded-2xl shadow-sm border border-slate-200 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-slate-800 text-white w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-xl shadow-inner">
+                <i class="fa-solid fa-chess-pawn"></i>
+            </div>
+            <div>
+                <h1 class="text-lg md:text-2xl font-extrabold text-slate-800">Clasificador de Peones</h1>
+                <p id="instruccion-txt" class="text-xs md:text-sm text-slate-500 font-semibold">Toca un peón y llévalo a su casa.</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 md:gap-4">
+            <!-- Botón Pantalla Completa -->
+            <button id="btn-fullscreen" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-3 rounded-xl transition-all active:scale-95 border border-slate-200">
+                <i class="fa-solid fa-expand text-lg"></i>
+            </button>
+
+            <!-- Selector de Criterio -->
+            <button id="btn-cambiar-modo" class="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-4 py-2 md:py-3 rounded-xl text-sm md:text-base flex items-center gap-2 transition-all active:scale-95 border border-amber-300">
+                <i class="fa-solid fa-rotate"></i>
+                <span id="texto-modo">Clasificar por Color</span>
+            </button>
+
+            <!-- Marcador -->
+            <div class="flex items-center bg-slate-800 px-4 py-2 md:py-3 rounded-xl gap-2 shadow-inner">
+                <i class="fa-solid fa-trophy text-amber-400"></i>
+                <span id="puntuacion-txt" class="text-lg md:text-xl font-bold text-white">0 / 20</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Zona Central: 20 Peones -->
+    <main class="flex-1 my-3 flex flex-col justify-center overflow-hidden">
+        <div class="bg-white/80 rounded-3xl p-4 shadow-inner border border-slate-200 h-full flex flex-col">
+            <div id="contenedor-peones" class="flex flex-wrap justify-center items-center gap-3 md:gap-5 h-full overflow-y-auto no-scrollbar content-center">
+                <!-- Inyección JS de peones -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Zona Inferior: Las Casas -->
+    <section class="w-full grid grid-cols-2 gap-4 shrink-0 h-[180px] md:h-[220px]">
+        
+        <!-- Casa 1 (Izquierda) -->
+        <div id="casa-1" class="casa-target border-4 border-dashed rounded-3xl p-3 flex flex-col items-center justify-between cursor-pointer transition-all shadow-sm relative overflow-hidden group">
+            <div class="flex items-center gap-2 z-10">
+                <i id="icono-casa-1" class="fa-solid fa-house text-2xl md:text-3xl"></i>
+                <h2 id="titulo-casa-1" class="text-lg md:text-2xl font-extrabold tracking-wide">Casa Blanca</h2>
+            </div>
+            <div id="contenido-casa-1" class="flex flex-wrap justify-center items-center gap-1 md:gap-2 my-auto w-full z-10"></div>
+            
+            <!-- Fondo decorativo sutil -->
+            <i id="bg-icono-casa-1" class="fa-solid fa-chess-pawn absolute -bottom-4 -right-4 text-9xl opacity-5"></i>
+        </div>
+
+        <!-- Casa 2 (Derecha) -->
+        <div id="casa-2" class="casa-target border-4 border-dashed rounded-3xl p-3 flex flex-col items-center justify-between cursor-pointer transition-all shadow-sm relative overflow-hidden group">
+            <div class="flex items-center gap-2 z-10">
+                <i id="icono-casa-2" class="fa-solid fa-house text-2xl md:text-3xl"></i>
+                <h2 id="titulo-casa-2" class="text-lg md:text-2xl font-extrabold tracking-wide">Casa Negra</h2>
+            </div>
+            <div id="contenido-casa-2" class="flex flex-wrap justify-center items-center gap-1 md:gap-2 my-auto w-full z-10"></div>
+            
+            <!-- Fondo decorativo sutil -->
+            <i id="bg-icono-casa-2" class="fa-solid fa-chess-pawn absolute -bottom-4 -left-4 text-9xl opacity-5"></i>
+        </div>
+
+    </section>
+
+    <!-- Modal de Victoria -->
+    <div id="modal-victoria" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-center">
+        <div class="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl flex flex-col items-center gap-6 animate-bounce-short">
+            <i class="fa-solid fa-star text-amber-400 text-8xl drop-shadow-lg"></i>
+            <h2 class="text-4xl md:text-5xl font-extrabold text-slate-800">¡Reto Superado!</h2>
+            <p class="text-slate-500 font-semibold text-xl">Todos los peones están en su casa.</p>
+            <button id="btn-reiniciar" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg text-2xl transition-all active:scale-95 mt-4">
+                Jugar otra vez
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Estado Global del Juego
+        const estadoJuego = {
+            modo: 'color', // 'color' o 'tamano'
+            peones: [],
+            peonSeleccionadoId: null,
+            aciertos: 0,
+            totalPeones: 20
+        };
+
+        // Sintetizador Web Audio API (Sin latencia, ideal para PDI)
+        const AudioFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playClick() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1000, this.ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            },
+            playSuccess() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const notes = [440, 554.37, 659.25]; // A4, C#5, E5 (Acorde Mayor)
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.15, now + idx * 0.08);
+                    gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.08 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.15);
+                });
+            },
+            playError() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(150, now + 0.2);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+        };
+
+        const crearListaPeones = () => {
+            const nuevosPeones = [];
+            // Generamos 10 blancos y 10 negros
+            for (let i = 0; i < 20; i++) {
+                const esBlanco = i < 10;
+                // De cada 10, 5 grandes y 5 pequeños
+                const esGrande = (i % 10) < 5; 
+                
+                const color = esBlanco ? 'blanco' : 'negro';
+                const tamano = esGrande ? 'grande' : 'pequeno';
+                
+                // Usamos fa-regular (borde) para blanco y fa-solid para negro para distinguirlos claramente
+                const icono = color === 'blanco' ? 'fa-regular fa-chess-pawn' : 'fa-solid fa-chess-pawn';
+                const colorCSS = color === 'blanco' ? 'text-slate-600' : 'text-slate-900';
+                
+                // Ajustamos tamaños relativos (un poco más pequeños para que quepan 20)
+                const pxSize = tamano === 'grande' ? 'text-5xl md:text-6xl' : 'text-3xl md:text-4xl';
+
+                nuevosPeones.push({
+                    id: i + 1,
+                    tamano,
+                    color,
+                    icono,
+                    colorCSS,
+                    pxSize,
+                    clasificado: false
+                });
+            }
+            // Mezclar el array aleatoriamente
+            return nuevosPeones.sort(() => Math.random() - 0.5);
+        };
+
+        const actualizarEstilosCasas = () => {
+            const c1 = document.getElementById('casa-1');
+            const c2 = document.getElementById('casa-2');
+            
+            // Limpiar clases previas
+            c1.className = "casa-target border-4 border-dashed rounded-3xl p-3 flex flex-col items-center justify-between cursor-pointer transition-all shadow-sm relative overflow-hidden group";
+            c2.className = "casa-target border-4 border-dashed rounded-3xl p-3 flex flex-col items-center justify-between cursor-pointer transition-all shadow-sm relative overflow-hidden group";
+
+            if (estadoJuego.modo === 'color') {
+                // Casa 1: Blanca (Icono con relleno blanco y borde negro para no confundir)
+                c1.classList.add('bg-white', 'border-slate-300', 'hover:bg-slate-50');
+                document.getElementById('titulo-casa-1').className = "text-lg md:text-2xl font-extrabold tracking-wide text-slate-800";
+                document.getElementById('titulo-casa-1').innerText = "Casa Blanca";
+                document.getElementById('icono-casa-1').className = "fa-solid fa-house text-2xl md:text-3xl text-white";
+                document.getElementById('icono-casa-1').style.webkitTextStroke = "2px #1e293b";
+                
+                // Casa 2: Negra (Fondo gris claro para que la pieza negra contraste bien)
+                c2.classList.add('bg-slate-200', 'border-slate-400', 'hover:bg-slate-300');
+                document.getElementById('titulo-casa-2').className = "text-lg md:text-2xl font-extrabold tracking-wide text-slate-800";
+                document.getElementById('titulo-casa-2').innerText = "Casa Negra";
+                document.getElementById('icono-casa-2').className = "fa-solid fa-house text-2xl md:text-3xl text-slate-800";
+                document.getElementById('icono-casa-2').style.webkitTextStroke = "0px";
+            } else {
+                // Casa 1: Grandes (Gris intermedio)
+                c1.classList.add('bg-slate-200', 'border-slate-400', 'hover:bg-slate-300');
+                document.getElementById('titulo-casa-1').className = "text-lg md:text-2xl font-extrabold tracking-wide text-slate-800";
+                document.getElementById('titulo-casa-1').innerText = "Casa de los GRANDES";
+                document.getElementById('icono-casa-1').className = "fa-solid fa-house text-3xl md:text-4xl text-slate-600";
+                document.getElementById('icono-casa-1').style.webkitTextStroke = "0px";
+                
+                // Casa 2: Pequeños (Gris claro)
+                c2.classList.add('bg-slate-100', 'border-slate-300', 'hover:bg-slate-200');
+                document.getElementById('titulo-casa-2').className = "text-lg md:text-2xl font-extrabold tracking-wide text-slate-700";
+                document.getElementById('titulo-casa-2').innerText = "Casa de los PEQUEÑOS";
+                document.getElementById('icono-casa-2').className = "fa-solid fa-house text-xl md:text-2xl text-slate-500";
+                document.getElementById('icono-casa-2').style.webkitTextStroke = "0px";
+            }
+        };
+
+        const renderizarUI = () => {
+            const contenedor = document.getElementById('contenedor-peones');
+            contenedor.innerHTML = '';
+
+            const peonesActivos = estadoJuego.peones.filter(p => !p.clasificado);
+
+            peonesActivos.forEach(peon => {
+                const esSeleccionado = estadoJuego.peonSeleccionadoId === peon.id;
+                const btn = document.createElement('button');
+                
+                // Botones más limpios y proporcionales para que quepan 20
+                btn.className = `rounded-2xl bg-white border-2 border-slate-200 flex items-center justify-center transition-all ${
+                    peon.tamano === 'grande' ? 'w-16 h-20 md:w-20 md:h-24' : 'w-12 h-16 md:w-16 md:h-20'
+                } ${esSeleccionado ? 'borde-animado bg-amber-50 border-amber-400' : 'hover:scale-105 hover:border-slate-300 hover:shadow-md'}`;
+
+                btn.innerHTML = `<i class="${peon.icono} ${peon.pxSize} ${peon.colorCSS}"></i>`;
+                btn.onclick = () => seleccionarPeon(peon.id);
+                contenedor.appendChild(btn);
+            });
+
+            document.getElementById('puntuacion-txt').innerText = `${estadoJuego.aciertos} / ${estadoJuego.totalPeones}`;
+            actualizarEstilosCasas();
+        };
+
+        const seleccionarPeon = (id) => {
+            AudioFX.playClick();
+            if (estadoJuego.peonSeleccionadoId === id) {
+                estadoJuego.peonSeleccionadoId = null;
+            } else {
+                estadoJuego.peonSeleccionadoId = id;
+            }
+            renderizarUI();
+        };
+
+        const intentarClasificarEnCasa = (numCasa) => {
+            if (!estadoJuego.peonSeleccionadoId) return;
+
+            const peon = estadoJuego.peones.find(p => p.id === estadoJuego.peonSeleccionadoId);
+            let esCorrecto = false;
+
+            if (estadoJuego.modo === 'color') {
+                if (numCasa === 1 && peon.color === 'blanco') esCorrecto = true;
+                if (numCasa === 2 && peon.color === 'negro') esCorrecto = true;
+            } else {
+                if (numCasa === 1 && peon.tamano === 'grande') esCorrecto = true;
+                if (numCasa === 2 && peon.tamano === 'pequeno') esCorrecto = true;
+            }
+
+            if (esCorrecto) {
+                AudioFX.playSuccess();
+                peon.clasificado = true;
+                estadoJuego.aciertos++;
+                estadoJuego.peonSeleccionadoId = null;
+
+                // Inyectar versión minimizada en la casa (para que quepan los 10)
+                const casaDestino = document.getElementById(`contenido-casa-${numCasa}`);
+                const miniIcono = document.createElement('div');
+                // Estilo para que se vean bien tanto en casa blanca como negra (usando el color propio de la pieza)
+                miniIcono.className = `flex items-center justify-center anim-exito ${peon.colorCSS}`;
+                
+                // Iconos muy reducidos para no desbordar
+                const sizeClass = peon.tamano === 'grande' ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl';
+                miniIcono.innerHTML = `<i class="${peon.icono} ${sizeClass}"></i>`;
+                casaDestino.appendChild(miniIcono);
+
+                renderizarUI();
+
+                if (estadoJuego.aciertos === estadoJuego.totalPeones) {
+                    setTimeout(mostrarVictoria, 500);
+                }
+            } else {
+                AudioFX.playError();
+                // Breve vibración en la casa equivocada (Feedback visual)
+                const casa = document.getElementById(`casa-${numCasa}`);
+                casa.classList.add('translate-x-2');
+                setTimeout(() => casa.classList.remove('translate-x-2'), 100);
+                setTimeout(() => casa.classList.add('-translate-x-2'), 200);
+                setTimeout(() => casa.classList.remove('-translate-x-2'), 300);
+                
+                estadoJuego.peonSeleccionadoId = null;
+                renderizarUI();
+            }
+        };
+
+        const mostrarVictoria = () => {
+            document.getElementById('modal-victoria').classList.remove('hidden');
+        };
+
+        const iniciarNivel = () => {
+            estadoJuego.peones = crearListaPeones();
+            estadoJuego.peonSeleccionadoId = null;
+            estadoJuego.aciertos = 0;
+
+            document.getElementById('contenido-casa-1').innerHTML = '';
+            document.getElementById('contenido-casa-2').innerHTML = '';
+            document.getElementById('modal-victoria').classList.add('hidden');
+
+            renderizarUI();
+        };
+
+        // Fullscreen API Handling
+        const toggleFullscreen = () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error intentando activar pantalla completa: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        };
+
+        // Eventos DOM
+        document.getElementById('casa-1').onclick = () => intentarClasificarEnCasa(1);
+        document.getElementById('casa-2').onclick = () => intentarClasificarEnCasa(2);
+
+        document.getElementById('btn-cambiar-modo').onclick = () => {
+            AudioFX.playClick();
+            estadoJuego.modo = estadoJuego.modo === 'color' ? 'tamano' : 'color';
+            document.getElementById('texto-modo').innerText = estadoJuego.modo === 'color' ? 'Clasificar por Color' : 'Clasificar por Tamaño';
+            iniciarNivel();
+        };
+
+        document.getElementById('btn-reiniciar').onclick = () => {
+            AudioFX.playClick();
+            iniciarNivel();
+        };
+
+        document.getElementById('btn-fullscreen').onclick = toggleFullscreen;
+
+        // Carga inicial
+        window.onload = () => {
+            iniciarNivel();
+        };
+    </script>
+</body>
+</html>
